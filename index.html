@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="GAPPO verifies critic action-gradients with counterfactual probes before using them to refine PPO updates.">
+  <meta name="keywords" content="GAPPO, PPO, reinforcement learning, pathwise gradients, Unitree G1, robot learning">
+  <meta name="author" content="Anonymous authors">
+  <meta name="theme-color" content="#b84a6a">
+
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="GAPPO — Gradient-Aware Pathwise Policy Optimization">
+  <meta property="og:description" content="Trust what you can verify: counterfactual probes make critic gradients measurable before they influence PPO.">
+  <meta name="twitter:card" content="summary">
+
+  <title>GAPPO — Gradient-Aware Pathwise Policy Optimization</title>
+
+  <link rel="icon" href="./static/images/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700;9..144,800&amp;family=Inter:wght@400;500;600;700;800&amp;family=Lora:wght@500;600;700&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./static/css/bulma.min.css">
+  <link rel="stylesheet" href="./static/css/index.css">
+</head>
+<body>
+  <header class="site-header">
+    <nav class="navbar container is-max-desktop" aria-label="Main navigation">
+      <div class="navbar-brand">
+        <a class="navbar-item brand-mark" href="#top" aria-label="GAPPO home">GAPPO</a>
+        <button class="navbar-burger" type="button" aria-label="Open navigation" aria-expanded="false" data-target="site-navigation">
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+          <span aria-hidden="true"></span>
+        </button>
+      </div>
+      <div id="site-navigation" class="navbar-menu">
+        <div class="navbar-end">
+          <a class="navbar-item" href="#abstract">Abstract</a>
+          <a class="navbar-item" href="#method">Method</a>
+          <a class="navbar-item" href="#results">Results</a>
+          <a class="navbar-item" href="#experiments">G1 experiments</a>
+          <a class="navbar-item" href="#citation">BibTeX</a>
+        </div>
+      </div>
+    </nav>
+  </header>
+
+  <main id="top">
+    <section class="hero publication-hero">
+      <div class="hero-body">
+        <div class="container is-max-desktop">
+          <div class="hero-copy">
+            <h1 class="title publication-title">
+              Trust What You Can Verify:
+              <span>Gradient-Aware Pathwise Policy Optimization</span>
+            </h1>
+            <p class="hero-lead">
+              Verify critic gradients before letting them refine PPO.
+            </p>
+            <div class="publication-meta">
+              <p class="publication-authors">Anonymous Author(s)</p>
+              <!-- <p class="publication-venue">Under review at TMLR · 2026</p> -->
+            </div>
+
+            <div class="publication-links" aria-label="Publication resources">
+              <span class="button resource-button is-disabled" aria-disabled="true" title="Paper will be released later">
+              <!-- <a class="button paper-button" href="./static/papers/gappo.pdf" target="_blank" rel="noopener"> -->
+                <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M6 2h8l4 4v16H6V2Zm8 1.5V7h3.5M9 12h6M9 16h6"/></svg>
+                <span>Paper · Coming soon</span>
+              <!-- </a> -->
+              </span>
+
+              <span class="button resource-button is-disabled" aria-disabled="true" title="arXiv link will be added later">
+                <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 19 12 4l7 15M8.2 12.2h7.6"/></svg>
+                <span>arXiv · Coming soon</span>
+              </span>
+              <span class="button resource-button is-disabled" aria-disabled="true" title="Code will be released later">
+                <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m8 9-4 3 4 3m8-6 4 3-4 3m-2-9-4 12"/></svg>
+                <span>Code · Coming soon</span>
+              </span>
+              <a class="button results-button" href="#results">
+                <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M4 19V9m6 10V5m6 14v-7m4 7H2"/></svg>
+                <span>Results</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="teaser-section" aria-label="GAPPO rollout teaser">
+      <div class="container is-max-desktop">
+        <figure class="featured-rollout">
+          <div class="featured-rollout-media">
+            <video data-visibility-autoplay controls muted loop playsinline preload="none" poster="./static/images/g1/gappo_rough_banner.jpg" aria-label="Wide-view GAPPO rough-terrain rollout">
+              <source src="./static/videos/g1/gappo_rough_banner.mp4" type="video/mp4">
+              Your browser does not support MP4 video.
+            </video>
+          </div>
+          <figcaption><strong>GAPPO Overview.</strong> Counterfactual probes verify critic action-gradients before trusted pathwise information refines the on-policy update.</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section id="abstract" class="section abstract-section" aria-labelledby="abstract-title">
+      <div class="container is-max-desktop narrow-container">
+        <div class="section-heading centered-heading">
+          <p class="eyebrow">Paper</p>
+          <h2 id="abstract-title" class="title is-2">Abstract</h2>
+        </div>
+        <div class="content abstract-copy">
+          <p>
+            On-policy methods such as PPO discard first-order pathwise information carried by action-conditioned critics, whereas naive use of this information can introduce bias and instability. We identify the obstacle as <em>phantom gradients</em>: confidently wrong critic derivatives that are dense, invisible to value-error metrics, and concentrated in difficult contact-rich regimes. We introduce Gradient-Aware Pathwise Policy Optimization (GAPPO), which retains the PPO learner while adding an exact zero-mean control variate and a deliberately biased, trust-gated refinement of the policy mean along the critic gradient. The refinement is projected not to oppose the unbiased PPO signal and is capped per state. Trust is calibrated, rather than tuned, using a small, budgeted set of common-random-number branch probes that compare critical derivatives with counterfactual outcomes and estimate sign accuracy. We prove that pathwise directions are unidentifiable from value fitting alone, motivating counterfactual measurement; establish the control variate’s zero-mean property and the refinement’s displacement bound; and derive a confidence-certified gate whose refinement is non-degrading relative to PPO with high probability, up to stated approximation errors. Under matched interaction budgets, GAPPO improves sample efficiency on Unitree G1 velocity tracking, with larger step-to-threshold speedups on harder terrain. All GAPPO seeds reach every evaluated threshold, whereas one PPO seed misses the hardest target; deterministic evaluations show comparable final gait quality. Across six DMC-style tasks, GAPPO numerically matches or exceeds PPO, with the clearest gain on walker-run. By contrast, naive score/pathwise mixing degrades severely, while an entropy-controlled pathwise baseline exhibits collapse and fall-rate pathologies. GAPPO thus converts verified pathwise information into sample-efficiency gains while retaining PPO’s optimization and exploration backbone.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section id="method" class="section method-section" aria-labelledby="method-title">
+      <div class="container is-max-desktop">
+        <div class="section-heading centered-heading method-heading">
+          <p class="eyebrow">Method</p>
+          <h2 id="method-title" class="title is-2">Method overview</h2>
+          <p class="section-intro">
+            GAPPO keeps the standard PPO update, measures whether critic directions improve counterfactual outcomes, and refines the policy only where those directions are verified.
+          </p>
+        </div>
+
+        <figure class="overview-figure">
+          <div class="overview-scroll" tabindex="0" role="region" aria-label="Scrollable GAPPO method overview">
+            <a href="./static/images/figures/gappo-method-overview.svg" target="_blank" rel="noopener" aria-label="Open Figure 1 at full size">
+              <img src="./static/images/figures/gappo-method-overview.svg" alt="Figure 1. GAPPO keeps PPO as the backbone, verifies critic gradients with paired counterfactual branches, and integrates only trusted directions into PPO." decoding="async">
+            </a>
+          </div>
+          <span class="mobile-scroll-hint">Swipe to inspect · Tap to open full size</span>
+          <figcaption>
+            <strong>Figure 1: Overview and intuition of GAPPO.</strong>
+            Left: PPO’s clipped surrogate provides the on-policy optimization anchor. Center: paired common-random-number branches supervise critic directions and calibrate their sign accuracy. Right: verified directions enter through an exact zero-mean correction and a trust-gated, projected, capped policy-mean refinement.
+          </figcaption>
+        </figure>
+
+        <div class="method-notes">
+          <article>
+            <span class="note-tag">On-policy anchor</span>
+            <h3>Clipped policy update</h3>
+            <p>The PPO score-gradient anchors each policy step, while verified pathwise directions provide complementary local improvement information.</p>
+          </article>
+          <article>
+            <span class="note-tag note-tag-orange">Verify</span>
+            <h3>Counterfactual probes</h3>
+            <p>Paired branches from the same simulator state test the critic’s proposed action direction under shared randomness.</p>
+          </article>
+          <article>
+            <span class="note-tag note-tag-teal">Integrate</span>
+            <h3>Verified refinement</h3>
+            <p>Measured sign accuracy gates a policy-mean update that is PPO-aligned, projected, and capped per state.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section id="results" class="section results-section" aria-labelledby="results-title">
+      <div class="container is-max-desktop">
+        <div class="section-heading">
+          <p class="eyebrow">Main empirical results</p>
+          <h2 id="results-title" class="title is-2">Earlier thresholds, matched asymptotes.</h2>
+          <p class="section-intro">
+            Under matched interaction budgets on Unitree G1 velocity tracking, GAPPO reaches intermediate performance levels earlier while retaining comparable deterministic gait quality.
+          </p>
+        </div>
+
+        <div class="results-metrics" aria-label="Headline G1 results">
+          <div><strong>1.11×</strong><span>flat reward-62 speedup</span></div>
+          <div><strong>1.34×</strong><span>rough reward-18 speedup</span></div>
+          <div><strong>16 / 17</strong><span>completed seed pairs faster</span></div>
+          <div><strong>0.05%</strong><span>probe interaction budget</span></div>
+        </div>
+
+        <div class="result-grid">
+          <figure class="plot-card">
+            <img src="./static/images/figures/g1-flat-curves.svg" alt="Mean episode reward versus training iteration for GAPPO, PPO, and REPPO on flat terrain." loading="lazy" decoding="async">
+            <figcaption><strong>G1 flat terrain.</strong> GAPPO reaches all three thresholds earlier in the three-seed mean.</figcaption>
+          </figure>
+          <figure class="plot-card">
+            <img src="./static/images/figures/g1-rough-curves.svg" alt="Mean episode reward versus training iteration for GAPPO, PPO, and REPPO on rough terrain." loading="lazy" decoding="async">
+            <figcaption><strong>G1 rough terrain.</strong> The margin grows at harder thresholds; one PPO seed never reaches reward 18.</figcaption>
+          </figure>
+        </div>
+
+        <p class="results-footnote">
+          Curves show three seeds (mean with min–max band), smoothed over 20 iterations. Speedups use identical-seed pairs; probe steps are counted against GAPPO’s interaction budget.
+        </p>
+
+        <!-- <div class="quality-callout">
+          <div>
+            <span class="callout-kicker">Deployment check</span>
+            <strong>Comparable deterministic gaits</strong>
+          </div>
+          <p>
+            At the 1.0 m/s command, PPO and GAPPO have nearly identical velocity error on both terrains and record the same number of falls over the complete rough-terrain command grid.
+          </p>
+        </div>
+      </div> -->
+    </section>
+
+    <section id="experiments" class="section experiments-section" aria-labelledby="experiments-title">
+      <div class="container is-max-desktop">
+        <div class="section-heading section-heading-row">
+          <div>
+            <p class="eyebrow">G1 experiments</p>
+            <h2 id="experiments-title" class="title is-2">Unitree G1 policy rollouts</h2>
+          </div>
+          <p class="section-intro compact-intro">Matched qualitative comparisons on flat and rough terrain, plus mid-training behavior and additional GAPPO demonstrations.</p>
+        </div>
+
+        <div class="rollout-group" aria-labelledby="flat-rollouts-title">
+          <div class="rollout-group-heading">
+            <h3 id="flat-rollouts-title" class="rollout-group-title">Flat-terrain comparison</h3>
+            <p>Thirty-second deterministic rollouts for all three evaluated methods.</p>
+          </div>
+          <div class="experiment-grid" data-experiment-gallery="flat" aria-live="polite"></div>
+        </div>
+
+        <div class="rollout-group" aria-labelledby="rough-rollouts-title">
+          <div class="rollout-group-heading">
+            <h3 id="rough-rollouts-title" class="rollout-group-title">Rough-terrain comparison</h3>
+            <p>The corresponding policies evaluated across the rough-terrain field.</p>
+          </div>
+          <div class="experiment-grid" data-experiment-gallery="rough" aria-live="polite"></div>
+        </div>
+
+        <div class="rollout-group" aria-labelledby="mid-training-rollouts-title">
+          <div class="rollout-group-heading">
+            <h3 id="mid-training-rollouts-title" class="rollout-group-title">Mid-training comparison</h3>
+            <p>Matched rough-terrain behavior at iteration 2500.</p>
+          </div>
+          <div class="experiment-grid is-two" data-experiment-gallery="mid-training" aria-live="polite"></div>
+        </div>
+
+        <div class="rollout-group" aria-labelledby="demo-rollouts-title">
+          <div class="rollout-group-heading">
+            <h3 id="demo-rollouts-title" class="rollout-group-title">Additional GAPPO demonstrations</h3>
+            <p>Full-length qualitative examples on both terrain families.</p>
+          </div>
+          <div class="experiment-grid is-two" data-experiment-gallery="demos" aria-live="polite"></div>
+        </div>
+
+        <noscript>
+          <p class="noscript-notice">Enable JavaScript to view the complete G1 rollout galleries.</p>
+        </noscript>
+      </div>
+    </section>
+
+    <section class="section evidence-section" aria-labelledby="evidence-title">
+      <div class="container is-max-desktop">
+        <div class="section-heading">
+          <p class="eyebrow">Broader evidence</p>
+          <h2 id="evidence-title" class="title is-2">Trust adapts; performance generalizes.</h2>
+        </div>
+
+        <div class="evidence-grid">
+          <figure class="plot-card plot-card-wide">
+            <img src="./static/images/figures/g1-trust.svg" alt="Measured probe sign accuracy during flat and rough G1 training." loading="lazy" decoding="async">
+            <figcaption>
+              <strong>Trust is measured during training.</strong> Sign accuracy rises above chance and remains lower on rough terrain, where critic gradients are less reliable.
+            </figcaption>
+          </figure>
+          <figure class="plot-card plot-card-wide">
+            <img src="./static/images/figures/dmc-final.svg" alt="Final returns for GAPPO, PPO, and REPPO across six DMC-style tasks." loading="lazy" decoding="async">
+            <figcaption>
+              <strong>Six DMC-style tasks.</strong> GAPPO is numerically at or above PPO on every task, with the clearest gain on walker-run.
+            </figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <section id="citation" class="section citation-section" aria-labelledby="citation-title">
+      <div class="container is-max-desktop narrow-container">
+        <div class="citation-heading">
+          <div>
+            <p class="eyebrow">Reference</p>
+            <h2 id="citation-title" class="title is-2">Citation</h2>
+          </div>
+          <button id="copy-citation" class="button copy-button" type="button" data-copy-target="bibtex-entry">Copy BibTeX</button>
+        </div>
+        <pre class="bibtex"><code id="bibtex-entry">@article{anonymous2026gappo,
+  title   = {Trust What You Can Verify: Gradient-Aware Pathwise Policy Optimization},
+  author  = {Anonymous Authors},
+  journal = {Transactions on Machine Learning Research},
+  year    = {2026}
+}</code></pre>
+        <p class="citation-note">This anonymous citation will be replaced when publication metadata is available.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer site-footer">
+    <div class="container is-max-desktop">
+      <div class="footer-grid">
+        <p><strong>GAPPO</strong><br>Trust what you can verify.</p>
+        <p>
+          Website template adapted from the
+          <a href="https://github.com/nerfies/nerfies.github.io" target="_blank" rel="noopener">Nerfies project page</a>
+          under
+          <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="license noopener">CC BY-SA 4.0</a>.
+        </p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="./static/js/experiments.js"></script>
+  <script src="./static/js/index.js"></script>
+</body>
+</html>
